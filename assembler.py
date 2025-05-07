@@ -24,6 +24,8 @@ op_codes = {
     "li": "001000",
     "j": "000010",
     "lui": "001111",
+    "move": "000000",
+    "syscall": "000000"
 }
 
 func_codes = {
@@ -32,6 +34,8 @@ func_codes = {
     "and:": "100100",
     "or:": "100101",
     "slt": "101010",
+    "move": "100000",       
+    "syscall": "001100"
 }
 
 registers = {
@@ -55,7 +59,7 @@ registers = {
     "$a1": "00101",
     "$a2": "00110",
     "$a3": "00111",
-    "$v0": "00010",
+    "$v0": "00010"
 }
 
 shift_logic_amount = "00000"
@@ -64,7 +68,7 @@ def interpret_line(mips_file: str):
     input_file = open(mips_file, "r")
     output_file = open("assembler_output.bin", "w")
     for instruction in input_file:
-        bin = assemble(instruction)
+        bin = assemble(instruction.strip())
         output_file.write(bin + "\n")
 
 def assemble(line):
@@ -77,40 +81,43 @@ def assemble(line):
     op_code = parts[0]
 
     if op_code in func_codes:
-        rd, rs, rt = (
-            parts[1].replace(",", ""),
-            parts[2].replace(",", ""),
-            parts[3].replace(",", ""),
-        )
-        return (
-        op_codes[op_code]
-        + registers[rs]
-        + registers[rt]
-        + registers[rd]
-        + shift_logic_amount
-        + func_codes[op_code]
-        )
-    if op_code in ["lw", "sw", "beq"]:
-        if op_code == "lw" or op_code == "sw":
-            rt = parts[1].replace(",", "")
-            offset, rs = parts[2].replace(")", "").split("(")
-            offset_bin = bin(int(offset)).replace("0b", "").zfill(16)
-            return op_codes[op_code] + registers[rs] + registers[rt] + offset_bin
-        elif op_code == "li":
-            rt = parts[1].replace(",", "")
-            imm = int(parts[2])
-            return op_codes[op_code] + registers["$zero"] + registers[rt] + format(imm & 0xFFFF, "016b")
-        elif op_code == "j":
-            address = int(parts[1])
-            return op_codes[op_code] + format(address, "026b")
+        if op_code == "move":
+            rd, rs = parts[1], parts[2]
+            return op_codes["add"] + registers[rs] + registers["$zero"] + registers[rd] + shift_logic_amount + func_codes["add"]
+        elif op_code == "syscall":
+            return op_codes["syscall"] + "00000000000000000000" + func_codes["syscall"]
         else:
-            rs, rt, offset = (
-                parts[1].replace(",", ""),
-                parts[2].replace(",", ""),
-                parts[3].replace(",", ""),
-            )
-            offset_bin = bin(int(offset)).replace("0b", "").zfill(16)
-            return op_codes[op_code] + registers[rs] + registers[rt] + offset_bin
+            rd, rs, rt = parts[1], parts[2], parts[3]
+            return op_codes[op_code] + registers[rs] + registers[rt] + registers[rd] + shift_logic_amount + func_codes[op_code]
+    if op_code in ["pow", "max", "min", "avg", "mod"]:
+        rd, rs, rt = parts[1], parts[2], parts[3]
+        return op_codes[op_code] + registers[rs] + registers[rt] + registers[rd] + shift_logic_amount + "000000"
+    if op_code in ["abs", "sqrt", "fac", "srt"]:
+        rd, rs = parts[1], parts[2]
+        return op_codes[op_code] + registers[rs] + "00000" + registers[rd] + shift_logic_amount + "000000"
+    
+    if op_code == "li":
+        rt, imm = parts[1], int(parts[2])
+        return op_codes[op_code] + registers["$zero"] + registers[rt] + format(imm & 0xFFFF, "016b")
+    if op_code in ["addi", "addii"]:
+        rt, rs, imm = parts[1], parts[2], int(parts[3])
+        return op_codes["addii"] + registers[rs] + registers[rt] + format(imm & 0xFFFF, "016b")
+    if op_code == "lui":
+        rt, imm = parts[1], int(parts[2])
+        return op_codes[op_code] + "00000" + registers[rt] + format(imm & 0xFFFF, "016b")
+    if op_code in ["lw", "sw"]:
+        rt = parts[1]
+        offset, rs = parts[2].replace(")", "").split("(")
+        offset_bin = format(int(offset), "016b")
+        return op_codes[op_code] + registers[rs] + registers[rt] + offset_bin
+    if op_code in ["beq", "bne"]:
+        rs, rt, offset = parts[1], parts[2], int(parts[3])
+        return op_codes[op_code] + registers[rs] + registers[rt] + format(offset & 0xFFFF, "016b")
+    if op_code == "j":
+        addr = int(parts[1])
+        return op_codes[op_code] + format(addr, "026b")
+
+    return None
 
 
 mips_file = "assembler_input.asm"
