@@ -29,6 +29,8 @@ func_codes = {
     "101010": "slt",
     "100001": "add",
     "001100": "and",
+    "011010": "div",
+    "001010": "slt",
 }
 
 registers = {
@@ -62,22 +64,23 @@ def bin_to_signed_int(bin_str):
 
 def handle_lines(bin_file: str):
     with open(bin_file, "r") as input_file:
-        lines = input_file.readlines()
+        content = input_file.read().strip()
+        lines = content.splitlines()
 
     mips_instructions = []
     for line in lines:
         mips_instructions.extend(bin_to_mips(line.strip()))
 
     with open("output.txt", "w") as output_file:
-        for instruction in mips_instructions:
-            output_file.write(instruction + "\n")
+        output_file.write('\n'.join(mips_instructions) + '\n')
+
 
 def bin_to_mips(line):
     mips = []
     for i in range(0, len(line), 32):
         bit_string = line[i:i+32]
         if len(bit_string) < 32:
-            continue  # Skip incomplete instructions
+            continue
 
         # NOP check
         if bit_string == "00000000000000000000000000000000":
