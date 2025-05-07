@@ -80,7 +80,7 @@ def bin_to_mips(line):
     for i in range(0, len(line), 32):
         bit_string = line[i:i+32]
         if len(bit_string) < 32:
-            continue
+            continue  # Skip incomplete instructions
 
         # NOP check
         if bit_string == "00000000000000000000000000000000":
@@ -132,6 +132,11 @@ def bin_to_mips(line):
             rt = bit_string[6:11]
             rd = bit_string[11:16]
             mips.append(f"abs {registers.get(rd, '?')}, {registers.get(rt, '?')}")
+        elif op_code == "101010":  # sqrt
+            rs = bit_string[6:11]
+            rt = bit_string[11:16]
+            rd = bit_string[16:21]
+            mips.append(f"sqrt {registers.get(rd, '?')}, {registers.get(rs, '?')}")
         elif op_code == "111001":  # mod
             rt = bit_string[6:11]
             rd = bit_string[11:16]
